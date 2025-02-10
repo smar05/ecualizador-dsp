@@ -9,23 +9,23 @@ void setup() {
 void loop() {
     // Lectura de la señal
     const int micValueProm = getMicrofonoInput();
-    // Serial.println(micValueProm); 
-    const int outputParlante = parlanteOutput(micValueProm);
-    Serial.println(outputParlante); 
+    Serial.println(micValueProm); 
+    
+    
+    // const int outputParlante = parlanteOutput(micValueProm);
+    // Serial.println(outputParlante); 
     // Enviar señal analógica al amplificador
-    dacWrite(DAC_PIN, outputParlante);
+    // dacWrite(DAC_PIN, outputParlante);
 }
 
 // Promedio de la señal
 int getMicrofonoInput() {
     const int n_muestras = 10;
     int suma = 0;
-    int readValue = 0;
     
     for (int i = 0; i < n_muestras; i++) {
         // readValue = analogRead(MIC_PIN); // constrain(analogRead(MIC_PIN), 0, 4095);        
-        readValue = limitValue(analogRead(MIC_PIN), 0, 4095);
-        suma += readValue; // Lectura del valor del microfono
+        suma += limitValue(analogRead(MIC_PIN), 0, 4095); // Lectura del valor del microfono
         delayMicroseconds(100);
     }
   
@@ -34,12 +34,7 @@ int getMicrofonoInput() {
 
 // Mapeo para la salida del parlante
 int parlanteOutput(int lectura) {
-    // Convertir a 8 bits (0-255)
-    int salida = map(lectura, 500, 3500, 0, 255); // map(lectura, 930, 2170, 0, 255); // map(lectura, 0, 4095, 0, 255);
-    salida = limitValue(salida, 0, 255);
-    // salida = constrain(salida, 0, 255);
-    
-    return salida;
+    return limitValue(map(lectura, 500, 3500, 0, 255), 0, 255); // map(lectura, 930, 2170, 0, 255); // map(lectura, 0, 4095, 0, 255);
 }
 
 int limitValue(int value, int minValue, int maxValue) {
