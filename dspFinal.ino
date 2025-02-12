@@ -83,7 +83,7 @@ void loop() {
     */
     
     //setDACValue(dacValue);
-    // setDACValue(micValueProm);
+    setDACValue(micValueProm);
 
     long output = micValueProm;
 
