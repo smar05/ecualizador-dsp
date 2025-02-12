@@ -12,7 +12,7 @@ Banda 6: 8 kHz – 16 kHz
 */
 
 #define MIC_PIN 34 // Pin donde esta conectado el MAX4466
-// #define DAC_PIN 25   // Salida analogica al amplificador
+#define DAC_PIN 25   // Salida analogica al amplificador
 
 // Dac de 12 bits
 #define BIT_11 26  // Bit mas significativo
@@ -40,8 +40,8 @@ const long firCoeffs[1][31] = {
     }
 };
 // Numero de coeficientes
-const int numTaps = 31;  // Numero de coeficientes por filtro (mitad de los 61 originales)
-float delayLine[numTaps * 2 - 1] = {0};  // Linea de retardo para el filtro FIR (61 muestras)
+const int numTaps = 31;  // Numero de coeficientes por filtro (mitad de los 61 originales) Orden 60
+float delayLine[numTaps * 2 - 1] = {0}; // Tamaño 61 retardos  // Linea de retardo para el filtro FIR (61 muestras)
 
 void setup() {
     Serial.begin(115200);
@@ -64,36 +64,40 @@ void setup() {
 void loop() {
     // Lectura de la señal
     const int micValueProm = getMicrofonoInput();
-    // Serial.println(micValueProm); 
+    //Serial.print("Entrada ADC: ");
+    //Serial.println(micValueProm);
 
-    // Aplicar los 6 filtros FIR (una por cada banda)
-    // float output = 0;
     /*
+    // Aplicar los 6 filtros FIR (una por cada banda)
+    long output = 0;
+    
     for (int band = 0; band < sizeof(firCoeffs); band++) {
         output += applyFIRFilter(micValueProm, firCoeffs[band]);
     }
-    
-    output = parlanteOutput(output);
-    // Serial.println(output); 
+    Serial.print("Salida Filtro: ");
+    Serial.println(output);
+
+    const int dacValue = parlanteOutput(map(output, -1000, 1000, 0, 4095));
+    Serial.print("DAC: ");
+    Serial.println(dacValue);
     */
-
-    // setDACValue(output);
-    setDACValue(micValueProm);
     
+    //setDACValue(dacValue);
+    // setDACValue(micValueProm);
 
-    // Dac del esp32
-    // dacWrite(DAC_PIN, output);
+    long output = micValueProm;
+
+    dacWrite(DAC_PIN, map(output, 0 , 4092, 0, 255));
 }
 
 // Promedio de la señal
 int getMicrofonoInput() {
-    const int n_muestras = 3;//10;
+    const int n_muestras = 1;//10;
     int suma = 0;
 
     for (int i = 0; i < n_muestras; i++) {
-        // readValue = analogRead(MIC_PIN); // constrain(analogRead(MIC_PIN), 0, 4095);        
         suma += limitValue(analogRead(MIC_PIN), 0, 4095); // Lectura del valor del microfono
-        delayMicroseconds(10.416667); // 100 // Para una frecuencia de muestreo de 32KHz o 31.25us -> 1/(32K*3)
+        delayMicroseconds(31.25); // 100 // Para una frecuencia de muestreo de 32KHz o 31.25us -> 1/(32K*3)
     }
   
     return suma / n_muestras;
@@ -104,18 +108,18 @@ int parlanteOutput(int lectura) {
     return limitValue(lectura, 0, 4095); // map(lectura, 500, 3500, 0, 255), 0, 255 // map(lectura, 930, 2170, 0, 255); // map(lectura, 0, 4095, 0, 255);
 }
 
-// Aplicar el filtro FIR (optimizado para simetria)
-float applyFIRFilter(int input, const long* coeffs) {
-    // Desplazar la linea de retardo
-    for (int i = numTaps * 2 - 1; i > 0; i--) {
+// Aplicar el filtro FIR (optimizado para simetría)
+float applyFIRFilter(int input, const float* coeffs) {
+    // Desplazar la línea de retardo
+    for (int i = numTaps * 2 - 2; i > 0; i--) {
         delayLine[i] = delayLine[i - 1];
     }
     delayLine[0] = input;
 
-    // Calcular la salida del filtro (aprovechando la simetria)
+    // Calcular la salida del filtro (aprovechando la simetría)
     float output = 0;
     for (int i = 0; i < numTaps; i++) {
-        output += (delayLine[i] + delayLine[numTaps * 2 - 1 - i]) * coeffs[i];
+        output += (delayLine[i] + delayLine[numTaps * 2 - 2 - i]) * coeffs[i];
     }
 
     return output;
